@@ -1,54 +1,58 @@
 import { CommonModule } from "@angular/common";
-import { Component } from "@angular/core";
+import { Component, forwardRef } from "@angular/core";
+import { PasswordStrengthService } from "./password.service";
+import { ControlValueAccessor, NG_VALUE_ACCESSOR } from "@angular/forms";
 
 @Component({
   selector: 'app-password',
   templateUrl: './password.component.html',
-  styleUrls: ['./password.component.css'],  // исправлено на styleUrls
+  styleUrl: './password.component.css',
   standalone: true,
   imports: [CommonModule],
+  providers: [
+    {
+      provide: NG_VALUE_ACCESSOR,
+      useExisting: forwardRef(() => PasswordComponent),
+      multi: true,
+    },
+  ],
 })
-export class PasswordComponent {
+
+export class PasswordComponent implements ControlValueAccessor {
   inputValue = '';
   firstSectionOfStrength = 'strength-empty';
   secondSectionOfStrength = 'strength-empty';
   thirdSectionOfStrength = 'strength-empty';
 
-  classifyPasswordStrength(event: any) {
+  constructor(private passwordStrengthService: PasswordStrengthService) {}
+
+  onChange: any = () => {};
+  onTouch: any = () => {};
+
+  writeValue (value: any) {
+    this.inputValue = value || '';
+    this.updateStrength();
+  }
+
+  registerOnChange (fn: any): void {
+    this.onChange = fn;
+  }
+  
+  registerOnTouched (fn: any): void {
+    this.onTouch = fn;
+  }
+
+  onInput(event: Event | any): void {
     this.inputValue = event.target.value;
+    this.onChange(this.inputValue);
+    this.onTouch();
+    this.updateStrength();
+  }
 
-    const hasLetters = /[A-Za-z]/.test(this.inputValue);
-    const hasDigits = /[0-9]/.test(this.inputValue);
-    const hasSymbols = /[!@#$%^&*(),.?":{}|<>]/.test(this.inputValue);
-
-    const typesCount = [hasLetters, hasDigits, hasSymbols].filter(Boolean).length;
-
-    if (this.inputValue.length === 0) {
-      this.firstSectionOfStrength = 'strength-empty';
-      this.secondSectionOfStrength = 'strength-empty';
-      this.thirdSectionOfStrength = 'strength-empty';
-    } else if (this.inputValue.length <= 8) {
-      this.firstSectionOfStrength = 'strength-weak';
-      this.secondSectionOfStrength = 'strength-weak';
-      this.thirdSectionOfStrength = 'strength-weak';
-    } else {
-      switch (typesCount) {
-        case 1:
-          this.firstSectionOfStrength = 'strength-weak';
-          this.secondSectionOfStrength = 'strength-empty';
-          this.thirdSectionOfStrength = 'strength-empty';
-          break;
-        case 2:
-          this.firstSectionOfStrength = 'strength-medium';
-          this.secondSectionOfStrength = 'strength-medium';
-          this.thirdSectionOfStrength = 'strength-empty';
-          break;
-        case 3:
-          this.firstSectionOfStrength = 'strength-strong';
-          this.secondSectionOfStrength = 'strength-strong';
-          this.thirdSectionOfStrength = 'strength-strong';
-          break;
-      }
-    }
+  updateStrength(): void {
+    const strengths = this.passwordStrengthService.classifyPasswordStrength(this.inputValue);
+    this.firstSectionOfStrength = strengths[0];
+    this.secondSectionOfStrength = strengths[1];
+    this.thirdSectionOfStrength = strengths[2];
   }
 }
