@@ -1,58 +1,56 @@
-import { CommonModule } from "@angular/common";
-import { Component, forwardRef } from "@angular/core";
-import { PasswordStrengthService } from "./password.service";
-import { ControlValueAccessor, NG_VALUE_ACCESSOR } from "@angular/forms";
+import { Component, forwardRef } from '@angular/core';
+import { ControlValueAccessor, FormBuilder, FormGroup, NG_VALUE_ACCESSOR } from '@angular/forms';
+import { PasswordStrengthService } from '../service/password.service';
 
 @Component({
   selector: 'app-password',
   templateUrl: './password.component.html',
-  styleUrl: './password.component.css',
-  standalone: true,
-  imports: [CommonModule],
+  styleUrls: ['./password.component.css'],
   providers: [
     {
       provide: NG_VALUE_ACCESSOR,
       useExisting: forwardRef(() => PasswordComponent),
-      multi: true,
-    },
-  ],
+      multi: true
+    }
+  ]
 })
 
 export class PasswordComponent implements ControlValueAccessor {
-  inputValue = '';
-  firstSectionOfStrength = 'strength-empty';
-  secondSectionOfStrength = 'strength-empty';
-  thirdSectionOfStrength = 'strength-empty';
+  inputValue: string = '';
+  strength: string[] = ['strength-empty', 'strength-empty', 'strength-empty'];
+  passwordForm: FormGroup;
 
-  constructor(private passwordStrengthService: PasswordStrengthService) {}
+  constructor(private passwordStrengthService: PasswordStrengthService, private fb: FormBuilder) {
+    this.passwordForm = this.fb.group({
+      password: ['']
+    });
 
-  onChange: any = () => {};
-  onTouch: any = () => {};
+    this.passwordForm.valueChanges.subscribe((value: { password: string }) => {
+      this.inputValue = value.password;
+      this.updateStrength();
+      this.onChange(this.inputValue);
+      this.onTouch();
+    });
+  }
 
-  writeValue (value: any) {
+  onChange: (value: string) => void = () => {};
+  onTouch: () => void = () => {};
+
+  writeValue(value: string): void {
     this.inputValue = value || '';
+    this.passwordForm.setValue({ password: this.inputValue }, { emitEvent: false });
     this.updateStrength();
   }
 
-  registerOnChange (fn: any): void {
+  registerOnChange(fn: (value: string) => void): void {
     this.onChange = fn;
   }
-  
-  registerOnTouched (fn: any): void {
+
+  registerOnTouched(fn: () => void): void {
     this.onTouch = fn;
   }
 
-  onInput(event: Event | any): void {
-    this.inputValue = event.target.value;
-    this.onChange(this.inputValue);
-    this.onTouch();
-    this.updateStrength();
-  }
-
   updateStrength(): void {
-    const strengths = this.passwordStrengthService.classifyPasswordStrength(this.inputValue);
-    this.firstSectionOfStrength = strengths[0];
-    this.secondSectionOfStrength = strengths[1];
-    this.thirdSectionOfStrength = strengths[2];
+    this.strength = this.passwordStrengthService.classifyPasswordStrength(this.inputValue);
   }
 }
